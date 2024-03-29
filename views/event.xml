@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_task_tree" model="ir.ui.view">
+        <field name="name">view.event.tree</field>
+        <field name="model">comissions.event</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_task_form" model="ir.ui.view">
+        <field name="name">view.event.form</field>
+        <field name="model">comissions.event</field>
+        <field name="arch" type="xml">
+            <form string="Event">
+                <header>
+                    <button name="notify_professors"
+                            string="Notify Professors"
+                            type="object"
+                            confirm="Are you sure you want to notify ?"
+                            class="oe_highlight"
+                            invisible="state != 'created'"
+                            groups="student.group_manager"
+                    />
+
+                    <button name="distribute_randomly"
+                            string="Distribute works randomly"
+                            type="object"
+                            confirm="Are you sure you want to distribute randomly?"
+                            class="oe_highlight"
+                            invisible="state != 'distribution'"
+                            groups="student.group_manager"
+                    />
+                    <button name="complete_comission_creating"
+                            string="Finish commission distribution"
+                            type="object"
+                            confirm="Are you sure you want to finish commision distribution?"
+                            class="oe_highlight"
+                            invisible="state != 'selection'"
+                            groups="student.group_manager"
+                    />
+                </header>
+                <sheet>
+                    <notebook>
+                        <page string="Description">
+                            <group>
+                                <field name="name" readonly="is_manager==False"/>
+                                <field name="program" invisible="id==False" readonly="state!='draft'"/>
+                                <field name="degree" readonly="state!='draft'"/>
+                                <field name="type" readonly="state!='draft'"/>
+                                <field name="state" invisible="1"/>
+                                <field name="is_manager" invisible="1"/>
+
+                                <field name="comissions" readonly="is_manager==False">
+                                    <tree editable="bottom">
+                                        <field name="name"/>
+                                        <field name="date"/>
+                                        <button name="add_user" type="object" string="Join" invisible="id==False" groups="student.group_professor"/>
+                                    </tree>
+                                </field>
+                                <field name="note" readonly="is_manager==False"/>
+<!--                                <field name="additional_files" widget="many2many_tags" string="Files" readonly="is_manager==False"/>-->
+                            </group>
+                        </page>
+                        <page string="Professors" invisible="id==False">
+                            <field name="matching_professors" invisible="state=='draft'" readonly="is_manager==False">
+                                <tree>
+                                    <field name="name"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Projects" invisible="id==False">
+                            <field name="matching_projects" invisible="state=='draft'" readonly="is_manager==False">
+                                <tree>
+                                    <field name="name"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_event" model="ir.actions.act_window" >
+        <field name="name">Events</field>
+        <field name="domain">[('manager_account.id','=',uid)]</field>
+        <field name="res_model">comissions.event</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="action_event_2" model="ir.actions.act_window" >
+        <field name="name">Events</field>
+        <field name="res_model">comissions.event</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_event" parent="menu_comissions_root" action="action_event" name="Events" groups="student.group_manager"/>
+    <menuitem id="menu_event_2" parent="menu_comissions_root" action="action_event_2" name="Events Professors" groups="student.group_professor"/>
+</odoo>

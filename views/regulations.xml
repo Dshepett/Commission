@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<odoo>
+    <!-- Add a message subtype for no one to see emails-->
+    <record id="comissions_message_subtype_email" model="mail.message.subtype">
+        <field name="name">Student - Email</field>
+        <field name="res_model">comissions.utils</field>
+        <field name="default" eval="False"/>
+    </record>
+</odoo>

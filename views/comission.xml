@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_sub_event_tree" model="ir.ui.view">
+        <field name="name">view.sub_event.tree</field>
+        <field name="model">comissions.comission</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="event_id"/>
+                <field name="name"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_sub_event_form" model="ir.ui.view">
+        <field name="name">view.sub_event.form</field>
+        <field name="model">comissions.comission</field>
+        <field name="arch" type="xml">
+            <form string="Sub Event">
+                <sheet>
+                    <notebook>
+                        <page string="Common">
+                            <group>
+                                <field name="event_id" readonly="1"/>
+                                <field name="name" readonly="is_manager==False"/>
+                                <field name="date" readonly="is_manager==False"/>
+                                <field name="is_manager" invisible="1"/>
+                                <field name="note" readonly="is_manager==False"/>
+<!--                                <field name="additional_files" widget="many2many_binary" string="Attach a file"/>-->
+
+                            </group>
+                        </page>
+                        <page name="Members">
+                            <group>
+                                <field name="user_ids" groups="student.group_manager" options="{'no_create': True}"
+                                       readonly="1">
+                                    <tree>
+                                        <field name="professor_id"/>
+                                        <field name="approved" invisible="1" width="0"/>
+                                        <button name="approve" type="object" string="Approve"
+                                                invisible="approved==True"/>
+                                    </tree>
+                                </field>
+                                <field name="approved_user_ids" options="{'no_create': True}"
+                                       readonly="is_manager==False">
+                                    <tree>
+                                        <field name="name"/>
+                                        <field name="display_name"/>
+                                    </tree>
+                                </field>
+                            </group>
+                        </page>
+                        <page name="Works">
+                            <field name="student_works" readonly="is_manager==False">
+                                <tree editable="bottom">
+                                    <field name="name" readonly="1"/>
+                                    <field name="grade"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_comission" model="ir.actions.act_window">
+        <field name="name">Commissions</field>
+        <field name="res_model">comissions.comission</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'group_by': 'event_id'}</field>
+        <field name="domain">[('event_id.manager_account.id', '=', uid)]</field>
+    </record>
+
+    <record id="action_comission_2" model="ir.actions.act_window">
+        <field name="name">Commissions</field>
+        <field name="res_model">comissions.comission</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'group_by': 'event_id'}</field>
+    </record>
+
+    <record id="action_comission_3" model="ir.actions.act_window">
+        <field name="name">Commissions</field>
+        <field name="res_model">comissions.comission</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'group_by': 'event_id'}</field>
+    </record>
+
+    <menuitem id="menu_sub_event" parent="menu_comissions_root" action="action_comission" name="Comissions"
+              groups="student.group_manager"/>
+    <menuitem id="menu_sub_event_2" parent="menu_comissions_root" action="action_comission_2" name="Comissions"
+              groups="student.group_professor"/>
+    <menuitem id="menu_sub_event_3" parent="menu_comissions_root" action="action_comission_3" name="Comissions"
+              groups="student.group_student"/>
+</odoo>

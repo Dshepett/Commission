@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <menuitem id="menu_comissions_root"
+                  name="Comissions"
+                  sequence="10"/>
+
+    </data>
+</odoo>
