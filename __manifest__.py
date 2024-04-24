@@ -2,7 +2,7 @@
     'name': 'Commissions organization',
     'author': 'Dshepett',
     'category': 'Human Resources/Student',
-    'summary': 'some summary',
+    'summary': 'Organize commissions',
     'depends': ['mail', 'student'],
     'data': [
         'security/ir.model.access.csv',

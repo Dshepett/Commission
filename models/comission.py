@@ -1,5 +1,8 @@
 from odoo import models, fields, api
-
+from odoo.http import request
+import xlsxwriter
+import base64
+import os
 
 class Comission(models.Model):
     _name = 'comissions.comission'
@@ -13,14 +16,8 @@ class Comission(models.Model):
                                          column1='comission_id',column2='user_id')
     student_works = fields.Many2many('student.project', string='Student Projects')
     is_manager = fields.Boolean(compute='_is_manager')
+    report_file = fields.Binary(string='Report File')
     note = fields.Text(string='Note')
-    # additional_files = fields.Many2many(
-    #     comodel_name='ir.attachment',
-    #     relation='commission_additional_files_rel',
-    #     column1='project_id',
-    #     column2='attachment_id',
-    #     string='Attachments'
-    # )
 
     @api.depends('user_ids')
     def _is_manager(self):
@@ -44,6 +41,58 @@ class Comission(models.Model):
                 'comission_id': self.id
             })
 
+            return self.env['comissions.utils'].message_display('Joined', f'You are joined to commission "{self.name}"',
+                                                                False)
+
+    def generate_report(self):
+        report_name = f'report_{self.name}.xlsx'
+        workbook = xlsxwriter.Workbook(report_name)
+
+        worksheet = workbook.add_worksheet()
+
+        worksheet.write(0, 0, 'Name')
+        worksheet.write(0, 1, self.name)
+        worksheet.write(1, 0, 'Date')
+        worksheet.write(1, 1, self.date.strftime('%Y-%m-%d %H:%M'))
+
+        worksheet.write(3,0,'Professors')
+
+        curr_row = 4
+
+        for user in self.approved_user_ids:
+            worksheet.write(curr_row,0,user.name)
+            curr_row += 1
+
+        curr_row+=1
+        worksheet.write(curr_row,0,'Projects')
+
+        curr_row += 1
+        worksheet.write(curr_row, 0, 'Name')
+        worksheet.write(curr_row, 1, 'Student')
+        worksheet.write(curr_row, 2, 'Grade')
+
+        curr_row += 1
+
+        for project in self.student_works:
+            worksheet.write(curr_row,0,project.name)
+            worksheet.write(curr_row,1,project.proposal_id.proponent.name)
+            worksheet.write(curr_row,2,project.grade)
+            curr_row += 1
+
+        workbook.close()
+
+        with open(report_name, 'rb') as file:
+            file_data = file.read()
+        self.report_file = base64.b64encode(file_data)
+
+        os.remove(report_name)
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/comissions.comission/%s/report_file/%s?download=true' % (
+                self.id, report_name),
+        }
+
 class CommissionProfessor(models.Model):
     _name = 'comissions.comission_professor'
     _description = 'Commission Professor'
@@ -56,3 +105,5 @@ class CommissionProfessor(models.Model):
         self.ensure_one()
         self.write({'approved': True})
         self.comission_id.approved_user_ids |= self.professor_id
+        return self.env['comissions.utils'].message_display('Approved', f'Professor {self.professor_id.name} is approved for comission "{self.comission_id.name}"',
+                                                            False)

@@ -16,10 +16,8 @@ class Utils(models.AbstractModel):
         else:
             channel_name = source + " №" + id
 
-        # Search the channel to avoid duplicates
         channel = context.env['discuss.channel'].sudo().search([('name', '=', channel_name)], limit=1, )
 
-        # If no suitable channel is found, create a new channel
         if not channel:
             channel = context.env['discuss.channel'].with_context(mail_create_nosubscribe=True).sudo().create({
                 'channel_partner_ids': [(6, 0, author.id + 1)],
@@ -28,7 +26,6 @@ class Utils(models.AbstractModel):
                 'display_name': channel_name
             })
 
-            # ♦ For some reason, I need to add 1 to all user ids. Strange...
             channel.write({
                 'channel_partner_ids': [(4, recipient.id + 1) for recipient in recipients]
             })

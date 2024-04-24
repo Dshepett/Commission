@@ -2,6 +2,7 @@ import random
 
 from odoo import models, fields, api, _
 from markupsafe import Markup
+from datetime import datetime, timedelta
 
 
 class Event(models.Model):
@@ -27,14 +28,10 @@ class Event(models.Model):
         ('done', 'Завершено'),
     ], string='Статус', default='draft')
     note = fields.Text(string='Note')
-    # additional_files = fields.Many2many(
-    #     comodel_name='ir.attachment',
-    #     relation='event_additional_files_rel',
-    #     column1='project_id',
-    #     column2='attachment_id',
-    #     string='Attachments'
-    # )
     is_manager = fields.Boolean(compute='_is_manager')
+    deadline = fields.Datetime(string='Deadline')
+    selection_complete = fields.Boolean(compute='_selection_complete')
+    notifcation_done = fields.Boolean(default=False)
 
     @api.model_create_multi
     def create(self, vals):
@@ -62,31 +59,42 @@ class Event(models.Model):
 
         return record
 
+    def close_selection(self):
+        records_to_update = self.search([('state', '=', 'selection'), ('deadline', '>=', fields.Datetime.now())])
+        records_to_update.write({'state': 'distribution'})
+
 
     def notify_professors(self):
         self.write({'state': 'selection'})
 
-        # Send the email --------------------
-        # subtype_id = self.env.ref('comissions.comissions_message_subtype_email')
-        # template = self.env.ref('comissions.email_template_event_send')
-        # template.send_mail(self.id, email_values={'subtype_id': subtype_id.id}, force_send=True)
-        # -----------------------------------
-
         for professor in self.matching_professors:
-
-            # Construct the message that is to be sent to the user
             message_text = f'<strong>Event invitation Received</strong><p> ' + self.manager_account.name + " sent an event «" + self.name + "». Please select date to join commission.</p>"
 
-            # Use the send_message utility function to send the message
             self.env['comissions.utils'].send_message('event', Markup(message_text), professor.professor_account,
-                                                   self.manager_account, (str(self.id), str(self.name)))
+                                                      self.manager_account, (str(self.id), str(self.name)))
+
+        return self.env['comissions.utils'].message_display('Sent', 'The event invitation is sent to professors.',
+                                                            False)
+
+    def notify_professors_deadline(self):
+        if datetime.now() - self.deadline.now() > timedelta(days=1):
+            return
 
 
+        for professor in self.matching_professors:
+            message_text = f'<strong>Event invitation Received</strong><p> ' + self.manager_account.name + " sent an event «" + self.name + "». You have only one day to select commission.</p>"
 
-        return self.env['comissions.utils'].message_display('Sent', 'The event invitation is sent to professors.', False)
+            self.env['comissions.utils'].send_message('event', Markup(message_text), professor.professor_account,
+                                                      self.manager_account, (str(self.id), str(self.name)))
+
+        self.notifcation_done
+
+
 
     def complete_comission_creating(self):
         self.write({'state': 'distribution'})
+        return self.env['comissions.utils'].message_display('Done', 'Commission distribution done. .',
+                                                            False)
 
     def distribute_randomly(self):
         self.ensure_one()
@@ -94,11 +102,12 @@ class Event(models.Model):
         if not self.matching_projects:
             return
 
-        projects = self.matching_projects
+        projects = list(self.matching_projects)
 
         random.shuffle(projects)
 
         comissions = self.comissions
+
 
         commissions_num = len(comissions)
 
@@ -108,6 +117,10 @@ class Event(models.Model):
 
         self.write({'state': 'defense'})
 
+        return self.env['comissions.utils'].message_display('Distributed', 'Works distributed randomly.',
+                                                            False)
+
+
     @api.depends('name')
     def _is_manager(self):
         target_group_xml_id = 'student.group_manager'
@@ -116,3 +129,5 @@ class Event(models.Model):
         for record in self:
             record.is_manager = target_group in user_groups
 
+    def _selection_complete(self):
+        self.selection_complete = self.state == 'done' or self.state == 'distribution' or self.state == 'defense'

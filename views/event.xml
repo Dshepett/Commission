@@ -3,8 +3,8 @@
     <record id="view_task_tree" model="ir.ui.view">
         <field name="name">view.event.tree</field>
         <field name="model">comissions.event</field>
-        <field name="arch" type="xml">
-            <tree>
+        <field name="arch" type="xml" >
+            <tree create="">
                 <field name="name"/>
             </tree>
         </field>
@@ -52,6 +52,8 @@
                                 <field name="type" readonly="state!='draft'"/>
                                 <field name="state" invisible="1"/>
                                 <field name="is_manager" invisible="1"/>
+                                <field name="selection_complete" invisible="1"/>
+                                <field name="deadline" readonly="is_manager==False" invisible="selection_complete==True"/>
 
                                 <field name="comissions" readonly="is_manager==False">
                                     <tree editable="bottom">
@@ -61,7 +63,6 @@
                                     </tree>
                                 </field>
                                 <field name="note" readonly="is_manager==False"/>
-<!--                                <field name="additional_files" widget="many2many_tags" string="Files" readonly="is_manager==False"/>-->
                             </group>
                         </page>
                         <page string="Professors" invisible="id==False">
@@ -95,6 +96,30 @@
         <field name="name">Events</field>
         <field name="res_model">comissions.event</field>
         <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.cron" id="event_close_selection">
+        <field name="name">Update State Cron</field>
+        <field name="model_id" ref="comissions.model_comissions_event"/>
+        <field name="state">code</field>
+        <field name="code">model.close_selection()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="doall" eval="True"/>
+        <field name="active" eval="True"/>
+    </record>
+
+    <record model="ir.cron" id="event_notify_deadline">
+        <field name="name">Update State Cron</field>
+        <field name="model_id" ref="comissions.model_comissions_event"/>
+        <field name="state">code</field>
+        <field name="code">model.notify_professors_deadline()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="doall" eval="True"/>
+        <field name="active" eval="True"/>
     </record>
 
     <menuitem id="menu_event" parent="menu_comissions_root" action="action_event" name="Events" groups="student.group_manager"/>
