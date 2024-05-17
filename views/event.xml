@@ -60,6 +60,14 @@
                             invisible="state != 'selection'"
                             groups="student.group_manager"
                     />
+
+                    <button name="commissions_availability"
+                            string="Show professors' availability"
+                            type="object"
+                            class="oe_highlight"
+                            invisible="state != 'selection'"
+                            groups="student.group_manager"
+                    />
                 </header>
                 <sheet>
                     <notebook>
@@ -80,7 +88,7 @@
                                         <field name="start_date"/>
                                         <field name="end_date"/>
                                         <button name="add_user" type="object" string="Available" invisible="id==False" groups="student.group_professor"/>
-                                        <button name="add_user" type="object" string="Not Available" invisible="id==False" groups="student.group_professor"/>
+                                        <button name="add_user_unavailable" type="object" string="Not Available" invisible="id==False" groups="student.group_professor"/>
                                     </tree>
                                 </field>
                                 <field name="note" readonly="is_manager==False"/>

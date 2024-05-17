@@ -55,16 +55,18 @@
                                        readonly="1">
                                     <tree>
                                         <field name="professor_id"/>
-                                        <field name="approved" invisible="1" width="0"/>
+                                        <field name="available"/>
+                                        <field name="approved"/>
                                         <button name="approve" type="object" string="Approve"
-                                                invisible="approved==True"/>
+                                                invisible="approved==True or available == False"/>
+                                        <button name="disapprove" type="object" string="Disapprove"
+                                                invisible="approved==False or available == False"/>
                                     </tree>
                                 </field>
                                 <field name="approved_user_ids" options="{'no_create': True}"
-                                       readonly="is_manager==False">
+                                       readonly="1">
                                     <tree>
                                         <field name="name"/>
-                                        <field name="display_name"/>
                                     </tree>
                                 </field>
                             </group>

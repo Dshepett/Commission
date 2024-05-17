@@ -85,7 +85,7 @@ class Event(models.Model):
                 raise ValidationError(_('Event must have at least one commission.'))
 
     def close_selection(self):
-        records_to_update = self.search([('state', '=', 'selection'), ('deadline', '>=', fields.Datetime.now())])
+        records_to_update = self.search([('state', '=', 'selection'), ('deadline', '<=', fields.Datetime.now())])
         records_to_update.write({'state': 'distribution'})
 
     def notify_professors(self):
@@ -106,7 +106,7 @@ class Event(models.Model):
                                                             False)
 
     def notify_professors_deadline_task(self):
-        events = self.search([('deadline', '!=', False)])
+        events = self.search([('deadline', '!=', False), ('notifcation_done', '=', False)])
         now = datetime.now()
         for event in events:
             deadline = fields.Datetime.from_string(event.deadline)
@@ -132,6 +132,14 @@ class Event(models.Model):
         self.write({'state': 'distribution'})
         return self.env['comissions.utils'].message_display(_('Done'), _('Commission distribution done.'),
                                                             False)
+
+    def commissions_availability(self):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        visit_table_url = '/visit_table/%s' % self.id
+        return {'type': 'ir.actions.act_url',
+                'url': base_url + visit_table_url,
+                'target': 'new',
+                }
 
     def distribute_randomly(self):
         self.ensure_one()

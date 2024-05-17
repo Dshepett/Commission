@@ -1,0 +1,31 @@
+<odoo>
+    <data>
+        <template id="template_visit_table" name="Visit Table">
+            <t t-call="website.layout">
+                <div class="container">
+                    <h1>Visit Table for Event: <t t-esc="event.name"/></h1>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Professor</th>
+                                <t t-foreach="commissions" t-as="commission">
+                                    <th><t t-esc="commission.name"/></th>
+                                </t>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="table_data" t-as="row">
+                                <tr>
+                                    <td><t t-esc="row['professor']"/></td>
+                                    <t t-foreach="commissions" t-as="commission">
+                                        <td><t t-esc="row[commission.name]"/></td>
+                                    </t>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </template>
+    </data>
+</odoo>

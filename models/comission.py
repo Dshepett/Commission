@@ -5,6 +5,7 @@ import xlsxwriter
 import base64
 import os
 
+
 class Comission(models.Model):
     _name = 'comissions.comission'
     _description = 'Commission'
@@ -14,9 +15,10 @@ class Comission(models.Model):
     end_date = fields.Datetime(string='End Date', required=True)
     event_id = fields.Many2one('comissions.event', string='Event', required=True)
 
-    user_ids = fields.One2many('comissions.comission_professor', 'comission_id', string='Joined Professors')
-    approved_user_ids = fields.Many2many('student.professor', string='Approved Professors',relation='comission_approved_user_rel',
-                                         column1='comission_id',column2='user_id')
+    user_ids = fields.One2many('comissions.comission_professor', 'commission_id', string='Joined Professors')
+    approved_user_ids = fields.Many2many('student.professor', string='Approved Professors',
+                                         relation='comission_approved_user_rel',
+                                         column1='comission_id', column2='user_id')
 
     student_works = fields.Many2many('student.project', string='Student Projects')
 
@@ -31,6 +33,7 @@ class Comission(models.Model):
     )
 
     is_manager = fields.Boolean(compute='_is_manager')
+
     @api.depends('user_ids')
     def _is_manager(self):
         target_group_xml_id = 'student.group_manager'
@@ -39,13 +42,13 @@ class Comission(models.Model):
         for record in self:
             record.is_manager = target_group in user_groups
 
-    @api.constrains('start_date','end_date')
+    @api.constrains('start_date', 'end_date')
     def _check_dates(self):
         for record in self:
             if record.start_date > record.end_date:
                 raise ValidationError(_('Start date must be less than end date.'))
             if record.start_date < record.event_id.deadline:
-                raise ValidationError(_('Commission dates must be greater than event deadline.'))
+                raise ValidationError(_('x'))
 
     def add_user(self):
         self.ensure_one()
@@ -58,11 +61,36 @@ class Comission(models.Model):
         if not exists:
             self.user_ids.create({
                 'professor_id': professor.id,
-                'comission_id': self.id
+                'commission_id': self.id,
+                'available': True
             })
 
-            return self.env['comissions.utils'].message_display('Joined', f'You are joined to commission "{self.name}"',
-                                                                False)
+        else:
+            exists.write({'available': True})
+
+        return self.env['comissions.utils'].message_display('Available',
+                                                            f'You are available for commission "{self.name}"', False)
+
+    def add_user_unavailable(self):
+        self.ensure_one()
+        current_user = self.env.uid
+
+        professor = self.env['student.professor'].search([('professor_account', '=', current_user)], limit=1)
+
+        exists = self.user_ids.filtered(lambda x: x.professor_id == professor.id)
+
+        if not exists:
+            self.user_ids.create({
+                'professor_id': professor.id,
+                'commission_id': self.id,
+                'available': False
+            })
+        else:
+            exists.write({'available': False})
+
+        return self.env['comissions.utils'].message_display('Not available',
+                                                            f'You are not available for commission "{self.name}"',
+                                                            False)
 
     def generate_report(self):
         report_name = f'report_{self.name}.xlsx'
@@ -77,16 +105,18 @@ class Comission(models.Model):
         worksheet.write(1, 2, 'End time')
         worksheet.write(1, 3, self.end_date.strftime('%Y-%m-%d %H:%M'))
 
-        worksheet.write(3,0,'Professors')
+        worksheet.write(3, 0, 'Professors')
 
         curr_row = 4
 
         for user in self.approved_user_ids:
-            worksheet.write(curr_row,0,user.name)
+            worksheet.write(curr_row, 0, user.name)
             curr_row += 1
 
-        curr_row+=1
-        worksheet.write(curr_row,0,'Projects')
+        total_grade = 0
+
+        curr_row += 1
+        worksheet.write(curr_row, 0, 'Projects')
 
         curr_row += 1
         worksheet.write(curr_row, 0, 'Name')
@@ -96,10 +126,14 @@ class Comission(models.Model):
         curr_row += 1
 
         for project in self.student_works:
-            worksheet.write(curr_row,0,project.name)
-            worksheet.write(curr_row,1,project.proposal_id.proponent.name)
-            worksheet.write(curr_row,2,project.grade)
+            worksheet.write(curr_row, 0, project.name)
+            worksheet.write(curr_row, 1, project.proposal_id.proponent.name)
+            worksheet.write(curr_row, 2, project.grade)
+            total_grade += float(project.grade)
             curr_row += 1
+
+        worksheet.write(curr_row, 1, 'Average')
+        worksheet.write(curr_row, 2, "{:.2f}".format(total_grade / len(self.student_works)))
 
         workbook.close()
 
@@ -115,17 +149,30 @@ class Comission(models.Model):
                 self.id, report_name),
         }
 
+
 class CommissionProfessor(models.Model):
     _name = 'comissions.comission_professor'
     _description = 'Commission Professor'
 
     professor_id = fields.Many2one('student.professor', string='Professor', required=True)
-    comission_id = fields.Many2one('comissions.comission', string='Comission', required=True)
+    commission_id = fields.Many2one('comissions.comission', string='Comission', required=True)
     approved = fields.Boolean(string='Approved', default=False)
+    available = fields.Boolean(string='Available', default=False)
 
     def approve(self):
         self.ensure_one()
         self.write({'approved': True})
-        self.comission_id.approved_user_ids |= self.professor_id
-        return self.env['comissions.utils'].message_display('Approved', f'Professor {self.professor_id.name} is approved for comission "{self.comission_id.name}"',
+        self.commission_id.approved_user_ids |= self.professor_id
+        return self.env['comissions.utils'].message_display('Approved',
+                                                            f'Professor {self.professor_id.name} is approved for '
+                                                            f'commission "{self.commission_id.name}"',
+                                                            False)
+
+    def disapprove(self):
+        self.ensure_one()
+        self.write({'approved': False})
+        self.commission_id.approved_user_ids -= self.professor_id
+        return self.env['comissions.utils'].message_display('Disapproved',
+                                                            f'Professor {self.professor_id.name} is disapproved for '
+                                                            f'commission "{self.commission_id.name}"',
                                                             False)
