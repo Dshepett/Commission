@@ -10,7 +10,7 @@
         'views/event.xml',
         'views/comission.xml',
         'views/email_templates.xml',
-        'views/regulations.xml'
+        'views/utils.xml',
     ],
     'installable': True,
     'application': True,

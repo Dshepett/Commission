@@ -33,10 +33,29 @@
                             invisible="state != 'distribution'"
                             groups="student.group_manager"
                     />
-                    <button name="complete_comission_creating"
+
+                    <button name="distribute_by_name"
+                            string="Distribute works by name"
+                            type="object"
+                            confirm="Are you sure you want to distribute by project name?"
+                            class="oe_highlight"
+                            invisible="state != 'distribution'"
+                            groups="student.group_manager"
+                    />
+
+                    <button name="distribute_by_student_name"
+                            string="Distribute works by student name"
+                            type="object"
+                            confirm="Are you sure you want to distribute by student name?"
+                            class="oe_highlight"
+                            invisible="state != 'distribution'"
+                            groups="student.group_manager"
+                    />
+
+                    <button name="complete_commission_creating"
                             string="Finish commission distribution"
                             type="object"
-                            confirm="Are you sure you want to finish commision distribution?"
+                            confirm="Are you sure you want to finish commission distribution?"
                             class="oe_highlight"
                             invisible="state != 'selection'"
                             groups="student.group_manager"
@@ -58,11 +77,19 @@
                                 <field name="comissions" readonly="is_manager==False">
                                     <tree editable="bottom">
                                         <field name="name"/>
-                                        <field name="date"/>
-                                        <button name="add_user" type="object" string="Join" invisible="id==False" groups="student.group_professor"/>
+                                        <field name="start_date"/>
+                                        <field name="end_date"/>
+                                        <button name="add_user" type="object" string="Available" invisible="id==False" groups="student.group_professor"/>
+                                        <button name="add_user" type="object" string="Not Available" invisible="id==False" groups="student.group_professor"/>
                                     </tree>
                                 </field>
                                 <field name="note" readonly="is_manager==False"/>
+
+                                <label for="additional_files"/>
+                                <p colspan="2" style="color:gray" invisible="id != False">
+                                    <i>Save the event to add additional files.</i>
+                                </p>
+                                <field name="additional_files" widget="many2many_tags" string="Files" readonly="is_manager==False" invisible="id == False"/>
                             </group>
                         </page>
                         <page string="Professors" invisible="id==False">
@@ -99,7 +126,7 @@
     </record>
 
     <record model="ir.cron" id="event_close_selection">
-        <field name="name">Update State Cron</field>
+        <field name="name">Close Selection Cron</field>
         <field name="model_id" ref="comissions.model_comissions_event"/>
         <field name="state">code</field>
         <field name="code">model.close_selection()</field>
@@ -111,10 +138,10 @@
     </record>
 
     <record model="ir.cron" id="event_notify_deadline">
-        <field name="name">Update State Cron</field>
+        <field name="name">Notify selection Cron</field>
         <field name="model_id" ref="comissions.model_comissions_event"/>
         <field name="state">code</field>
-        <field name="code">model.notify_professors_deadline()</field>
+        <field name="code">model.notify_professors_deadline_task()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">minutes</field>
         <field name="numbercall">-1</field>

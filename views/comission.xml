@@ -42,10 +42,11 @@
                             <group>
                                 <field name="event_id" readonly="1"/>
                                 <field name="name" readonly="is_manager==False"/>
-                                <field name="date" readonly="is_manager==False" widget="datetime"/>
+                                <field name="start_date" readonly="is_manager==False" widget="datetime"/>
+                                <field name="end_date" readonly="is_manager==False" widget="datetime"/>
                                 <field name="is_manager" invisible="1"/>
                                 <field name="note" readonly="is_manager==False"/>
-
+                                <field name="additional_files" widget="many2many_binary" string="Attach a file"/>
                             </group>
                         </page>
                         <page name="Members">
@@ -86,7 +87,6 @@
         <field name="name">Commissions</field>
         <field name="res_model">comissions.comission</field>
         <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="view_sub_event_tree"></field>
         <field name="context">{'group_by': 'event_id'}</field>
         <field name="domain">[('event_id.manager_account.id', '=', uid)]</field>
     </record>
@@ -94,7 +94,6 @@
     <record id="action_comission_2" model="ir.actions.act_window">
         <field name="name">Commissions</field>
         <field name="res_model">comissions.comission</field>
-        <field name="view_id" ref="view_sub_event_tree"></field>
         <field name="view_mode">tree,form</field>
         <field name="context">{'group_by': 'event_id'}</field>
     </record>
@@ -102,11 +101,9 @@
     <record id="action_comission_3" model="ir.actions.act_window">
         <field name="name">Commissions</field>
         <field name="res_model">comissions.comission</field>
-        <field name="view_id" ref="view_sub_event_tree"></field>
         <field name="view_mode">tree,form</field>
         <field name="context">{'group_by': 'event_id'}</field>
     </record>
-
 
     <menuitem id="menu_sub_event" parent="menu_comissions_root" action="action_comission" name="Comissions"
               groups="student.group_manager"/>

@@ -1,12 +1,13 @@
 from odoo import api, fields, models, _
 from markupsafe import Markup
 
+
 class Utils(models.AbstractModel):
     _name = 'comissions.utils'
     _description = 'Comissions - Utility Methods'
 
     @api.model
-    def send_message(context, source, message_text, recipients, author, data_tuple = -1):
+    def send_message(context, source, message_text, recipients, author, data_tuple=-1):
         tuple_id, tuple_name = data_tuple
 
         if source == 'event':
@@ -40,14 +41,14 @@ class Utils(models.AbstractModel):
 
     def message_display(self, title, message, sticky_bool):
         return {
-			'type': 'ir.actions.client',
-			'tag': 'display_notification',
-			'params': {
-				'title': _(title),
-				'message': message,
-				'sticky': sticky_bool,
-				'next': {
-					'type': 'ir.actions.act_window_close',
-				}
-			}
-		}
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _(title),
+                'message': message,
+                'sticky': sticky_bool,
+                'next': {
+                    'type': 'ir.actions.act_window_close',
+                }
+            }
+        }

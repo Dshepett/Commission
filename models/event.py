@@ -1,6 +1,7 @@
 import random
 
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError, ValidationError, AccessError
 from markupsafe import Markup
 from datetime import datetime, timedelta
 
@@ -10,14 +11,16 @@ class Event(models.Model):
     _description = 'Event'
     _inherit = ['mail.thread', 'comissions.utils']
 
-    name = fields.Char(string='Name', required=True)
-    program = fields.Many2one('student.program', string='Program')
-    degree = fields.Many2one('student.degree', string='Degree', required=True)
+    name = fields.Char(string=_('Name'), required=True)
+    program = fields.Many2one('student.program', string=_('Program'))
+    degree = fields.Many2one('student.degree', string=_('Degree'), required=True)
     type = fields.Selection([('cw', 'Course Work (Курсовая работа)'), ('fqw', 'Final Qualifying Work (ВКР)')],
-                            string="Proposal Project Type", required=True)
-    matching_projects = fields.Many2many('student.project', string='Matching Projects')
-    matching_professors = fields.Many2many('student.professor', string='Matching Professors')
-    comissions = fields.One2many('comissions.comission', 'event_id', string='Commissions')
+                            string=_("Proposal Project Type"), required=True)
+
+    matching_projects = fields.Many2many('student.project', string=_('Matching Projects'))
+    matching_professors = fields.Many2many('student.professor', string=_('Matching Professors'))
+    comissions = fields.One2many('comissions.comission', 'event_id', string=_('Commissions'))
+
     manager_account = fields.Many2one('res.users', string='Manager Account', default=lambda self: self.env.user)
     state = fields.Selection([
         ('draft', 'Черновик'),
@@ -27,16 +30,26 @@ class Event(models.Model):
         ('defense', 'Защита'),
         ('done', 'Завершено'),
     ], string='Статус', default='draft')
-    note = fields.Text(string='Note')
+    deadline = fields.Datetime(string=_('Deadline'))
+
+    note = fields.Text(string=_('Note'))
+    additional_files = fields.Many2many(
+        comodel_name='ir.attachment',
+        relation='commissions_event_additional_files_rel',
+        column1='event_id',
+        column2='attachment_id',
+        string=_('Attachments')
+    )
+
     is_manager = fields.Boolean(compute='_is_manager')
-    deadline = fields.Datetime(string='Deadline')
     selection_complete = fields.Boolean(compute='_selection_complete')
     notifcation_done = fields.Boolean(default=False)
 
     @api.model_create_multi
     def create(self, vals):
-
         matched_user = self.env['student.manager'].search([('manager_account', '=', self.env.user.id)])
+        if not matched_user:
+            raise AccessError(_('Only managers can create events.'))
 
         vals[0]['program'] = matched_user[0].program_ids[0].id
 
@@ -59,41 +72,65 @@ class Event(models.Model):
 
         return record
 
+    @api.constrains('deadline')
+    def _check_deadline(self):
+        for record in self:
+            if record.deadline and record.deadline < fields.Datetime.now():
+                raise ValidationError(_('Deadline must be greater than current date.'))
+
+    @api.constrains('comissions')
+    def _check_comissions(self):
+        for record in self:
+            if len(record.comissions) == 0:
+                raise ValidationError(_('Event must have at least one commission.'))
+
     def close_selection(self):
         records_to_update = self.search([('state', '=', 'selection'), ('deadline', '>=', fields.Datetime.now())])
         records_to_update.write({'state': 'distribution'})
 
-
     def notify_professors(self):
         self.write({'state': 'selection'})
 
-        for professor in self.matching_professors:
-            message_text = f'<strong>Event invitation Received</strong><p> ' + self.manager_account.name + " sent an event «" + self.name + "». Please select date to join commission.</p>"
+        subtype_id = self.env.ref('comissions.comissions_message_subtype_email')
+        template = self.env.ref('comissions.email_template_event_send')
+        template.send_mail(self.id, email_values={'subtype_id': subtype_id.id}, force_send=True)
 
-            self.env['comissions.utils'].send_message('event', Markup(message_text), professor.professor_account,
+        professor_ids = [professor.professor_account for professor in self.matching_professors]
+        message_text = _('<strong>Event invitation Received</strong><p> %s created event «%s». Please select date to '
+                         'join commission.</p>', self.manager_account.name, self.name)
+
+        self.env['comissions.utils'].send_message('event', Markup(message_text), professor_ids,
                                                       self.manager_account, (str(self.id), str(self.name)))
 
-        return self.env['comissions.utils'].message_display('Sent', 'The event invitation is sent to professors.',
+        return self.env['comissions.utils'].message_display(_('Sent'), _('The event invitation is sent to professors.'),
                                                             False)
 
+    def notify_professors_deadline_task(self):
+        events = self.search([('deadline', '!=', False)])
+        now = datetime.now()
+        for event in events:
+            deadline = fields.Datetime.from_string(event.deadline)
+            if deadline - now < timedelta(days=1):
+                event.notify_professors_deadline()
+
     def notify_professors_deadline(self):
-        if datetime.now() - self.deadline.now() > timedelta(days=1):
-            return
+        subtype_id = self.env.ref('comissions.comissions_message_subtype_email')
+        template = self.env.ref('comissions.email_template_event_selection_needed')
+        template.send_mail(self.id, email_values={'subtype_id': subtype_id.id}, force_send=True)
 
+        professor_ids = [professor.professor_account for professor in self.matching_professors]
 
-        for professor in self.matching_professors:
-            message_text = f'<strong>Event invitation Received</strong><p> ' + self.manager_account.name + " sent an event «" + self.name + "». You have only one day to select commission.</p>"
+        message_text = _('<strong>Comission selection ends soon</strong><p> %s created event «%s». You have only one day '
+                         'to select commission.</p>', self.manager_account.name, self.name)
 
-            self.env['comissions.utils'].send_message('event', Markup(message_text), professor.professor_account,
-                                                      self.manager_account, (str(self.id), str(self.name)))
+        self.env['comissions.utils'].send_message('event', Markup(message_text), professor_ids,
+                                                  self.manager_account, (str(self.id), str(self.name)))
 
-        self.notifcation_done
+        self.notifcation_done = True
 
-
-
-    def complete_comission_creating(self):
+    def complete_commission_creating(self):
         self.write({'state': 'distribution'})
-        return self.env['comissions.utils'].message_display('Done', 'Commission distribution done. .',
+        return self.env['comissions.utils'].message_display(_('Done'), _('Commission distribution done.'),
                                                             False)
 
     def distribute_randomly(self):
@@ -106,20 +143,45 @@ class Event(models.Model):
 
         random.shuffle(projects)
 
-        comissions = self.comissions
+        return self.distribute_sorted_works(projects)
 
+    def distribute_by_name(self):
+        self.ensure_one()
 
-        commissions_num = len(comissions)
+        if not self.matching_projects:
+            return
+
+        projects = list(self.matching_projects)
+
+        projects.sort(key=lambda x: x.name)
+
+        return self.distribute_sorted_works(projects)
+
+    def distribute_by_student_name(self):
+        self.ensure_one()
+
+        if not self.matching_projects:
+            return
+
+        projects = list(self.matching_projects)
+
+        projects.sort(key=lambda x: x.proposal_id.proponent.name)
+
+        return self.distribute_sorted_works(projects)
+
+    def distribute_sorted_works(self, projects):
+        commissions = self.comissions
+
+        commissions_num = len(commissions)
 
         for index, project in enumerate(projects):
-            commission = comissions[index % commissions_num]
+            commission = commissions[index % commissions_num]
             commission.student_works |= self.env['student.project'].browse(project.id)
 
         self.write({'state': 'defense'})
 
-        return self.env['comissions.utils'].message_display('Distributed', 'Works distributed randomly.',
+        return self.env['comissions.utils'].message_display(_('Distributed'), _('Works distributed.'),
                                                             False)
-
 
     @api.depends('name')
     def _is_manager(self):
