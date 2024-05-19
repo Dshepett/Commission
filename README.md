@@ -1,2 +1,2 @@
 # Commissions for Odoo17
-Для корректной работы модуля также необходимо сверх библиотек, используемых odoo, импортировать библиотеку xlsxwriter, а также установить модуль PaLMS [следующей версии](https://github.com/sefasenlik/PaLMS/tree/456cf27a75a15ddc1a3aa5bf2c28727cb3055cb8) 
+Для корректной работы модуля также необходимо сверх библиотек, используемых odoo, импортировать библиотеку xlsxwriter, а также установить модуль PaLMS [следующей версии](https://github.com/sefasenlik/PaLMS/commit/ad86212f54d75207cb923ec55b4899f937663f76) 
